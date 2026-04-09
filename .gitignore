@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.py[cod]
+
+
+
+data/workspace/
+data/frames/
+data/input_video
+data/results
+*.ply
+*.pfm
+
+.venv/
+env/
