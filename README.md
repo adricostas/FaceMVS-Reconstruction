@@ -165,21 +165,21 @@ While the current pipeline provides a robust baseline for 3D reconstruction, sev
 ### 1. Metric Scale Recovery (Biometric Scaling)
 Currently, the model is generated in an arbitrary coordinate system. To achieve real-world millimeter precision, we plan to:
 
-* IPD Normalization: Use the average human Interpupillary Distance (63mm) as a reference to rescale the point cloud.
+* **IPD Normalization**: Use the average human Interpupillary Distance (63mm) as a reference to rescale the point cloud.
 
-* Iris Estimation: Integrate MediaPipe Iris to calculate absolute distance to the camera, leveraging the near-constant human iris diameter (11.7mm).
+* **Iris Estimation**: Integrate MediaPipe Iris to calculate absolute distance to the camera, leveraging the near-constant human iris diameter (11.7mm).
 
 ### 2. Hybrid SfM with Semantic Landmarks
 To improve the robustness of the sparse reconstruction (Stage 1), we propose:
 
-* Landmark-Guided SfM: Injecting 3D facial landmarks from MediaPipe Face Mesh into the COLMAP process. This would provide strong geometric priors, especially in videos with fast movement or challenging angles where traditional feature matching might fail.
+* **Landmark-Guided SfM**: Injecting 3D facial landmarks from MediaPipe Face Mesh into the COLMAP process. This would provide strong geometric priors, especially in videos with fast movement or challenging angles where traditional feature matching might fail.
 
 ### 3. Advanced Texture De-lighting & Blending
 The current texturing suffers from lighting inconsistencies. Future iterations will include:
 
-* Seamless Blending: Implementing a multi-band blending algorithm to smooth out transitions between frames.
+* **Seamless Blending**: Implementing a multi-band blending algorithm to smooth out transitions between frames.
 
-* Inverse Rendering: Using a neural "de-lighting" stage to remove shadows and specular highlights, recovering the true albedo of the skin for more realistic assets.
+* **Inverse Rendering**: Using a neural "de-lighting" stage to remove shadows and specular highlights, recovering the true albedo of the skin for more realistic assets.
 
 ### 4. Parametric Model Fitting (FLAME)
-For applications requiring animation or rigging, the pipeline could evolve to fit a FLAME parametric model to the dense point cloud. This would transform the raw mesh into a clean, animatable topology with separated shape and expression parameters.
+For applications requiring animation or rigging, the pipeline could evolve to fit a [FLAME](https://flame.is.tue.mpg.de/) parametric model to the dense point cloud. This would transform the raw mesh into a clean, animatable topology with separated shape and expression parameters.
