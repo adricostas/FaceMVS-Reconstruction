@@ -3,7 +3,6 @@ import os
 import numpy as np
 from rembg import remove, new_session
 
-
 class FrameExtractor:
     def __init__(self, max_frames=200, motion_threshold=150):
         self.max_frames = max_frames
@@ -15,20 +14,41 @@ class FrameExtractor:
             minDistance=7,
             blockSize=7
         )
-    
+        # Use isnet-general-use for better high-resolution performance
         self.session = new_session("isnet-general-use") 
 
     def _apply_background_removal(self, frame):
+        """
+        Removes background and applies morphological refinement to eliminate 
+        black artifacts around the subject.
+        """
+        # 1. Get Alpha Mask using rembg
         out_rgba = remove(frame, session=self.session)
         out_rgba = np.array(out_rgba)
-        mask = out_rgba[:, :, 3] > 0
         
-        # Crear fondo VERDE (BGR: 0, 255, 0)
+        # Extract alpha channel (0-255)
+        alpha = out_rgba[:, :, 3]
+        
+        # 2. Morphological Refinement
+        # Use a kernel to erode the mask slightly (removes the outer black halo)
+        # and then dilate to smooth the edges.
+        kernel = np.ones((5, 5), np.uint8)
+        
+        # Erode to "eat" the dark edges, then dilate to recover shape
+        mask_binary = (alpha > 128).astype(np.uint8) # Thresholding
+        mask_refined = cv2.morphologyEx(mask_binary, cv2.MORPH_OPEN, kernel)
+        mask_refined = cv2.erode(mask_refined, kernel, iterations=1)
+        
+        # Final mask boolean for indexing
+        mask_bool = mask_refined > 0
+        
+        # 3. Create GREEN background (BGR: 0, 255, 0)
         green_bg = np.zeros_like(frame)
-        green_bg[:] = [0, 255, 0] # Llenamos todo de verde
+        green_bg[:] = [0, 255, 0] 
         
-        # Pegar el sujeto sobre el verde
-        green_bg[mask] = out_rgba[:, :, :3][mask]
+        # 4. Composite the subject onto the green background
+        # We use the refined mask to ensure no black border is left
+        green_bg[mask_bool] = out_rgba[:, :, :3][mask_bool]
         
         return green_bg
 
@@ -70,14 +90,12 @@ class FrameExtractor:
                 cap.release()
             frame_gen = get_frames()
         else:
-            # source is a list of image paths
             def get_frames():
                 for img_path in source:
                     frame = cv2.imread(str(img_path))
                     if frame is not None: yield frame
             frame_gen = get_frames()
 
-        # --- Core Logic ---
         try:
             frame_prev = next(frame_gen)
         except StopIteration:
@@ -91,18 +109,24 @@ class FrameExtractor:
             if len(self.keyframes) >= self.max_frames:
                 break
 
-            # Calculate motion on RAW frames
+            # Calculate motion on RAW frames to avoid green background interference
             motion = self._get_motion(last_frame_raw, frame_curr)
 
             if motion > self.motion_threshold:
                 clean_frame = self._apply_background_removal(frame_curr)
                 self.keyframes.append(clean_frame)
                 last_frame_raw = frame_curr
-                print(f"[INFO] Frame {len(self.keyframes)} captured.")
+                print(f"[INFO] Frame {len(self.keyframes)} captured with motion {motion:.2f}")
 
         return self.keyframes
     
     def save_for_colmap(self, output_dir):
+        """
+        Saves keyframes as JPG to ensure high performance during 
+        dense reconstruction (Stage 3).
+        """
         os.makedirs(output_dir, exist_ok=True)
         for i, frame in enumerate(self.keyframes):
-            cv2.imwrite(os.path.join(output_dir, f"frame_{i:03d}.png"), frame)
+            # Saving as JPG with high quality to optimize I/O speed
+            output_path = os.path.join(output_dir, f"frame_{i:03d}.jpg")
+            cv2.imwrite(output_path, frame, [int(cv2.IMWRITE_JPEG_QUALITY), 95])

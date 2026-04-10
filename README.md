@@ -1,8 +1,8 @@
 # FaceMVS-Reconstruction: Hybrid Structure-from-Motion & Multi-View Stereo Pipeline
 
-FaceMVS-Reconstruction is a 3D reconstruction pipeline designed to transform video files or image sequences of human heads into 3D meshes. The system integrates intelligent frame extraction, sparse reconstruction (SfM), neural dense reconstruction (PatchMatchNet), and Poisson surface reconstruction. 
+FaceMVS-Reconstruction is a 3D reconstruction pipeline designed to transform video files or image sequences of human heads into 3D meshes. The system integrates intelligent frame extraction, sparse reconstruction (SfM), neural dense reconstruction ([PatchmatchNet](https://github.com/FangjinhuaWang/PatchmatchNet)), and Poisson surface reconstruction. 
 
-![mesh_result](mesh_result.png)
+![mesh_result](result_gif.gif)
 ---
 
 ## 🚀 Pipeline Overview
@@ -19,24 +19,24 @@ Leverages **pycolmap** to estimate camera intrinsics, extrinsics, and a sparse p
 
 ### Stage 2: MVS Conversion
 
-Formats the SfM output for compatibility with **PatchMatchNet**.
+Formats the SfM output for compatibility with **PatchmatchNet**.
 
 ### Stage 3: Neural Dense Reconstruction
 
-Utilizes **PatchMatchNet** to generate high-fidelity depth maps and a fused dense point cloud. A Neural method was selected since faces have a lot of textureless areas that classical methods cannot deal with.
+Utilizes **PatchmatchNet** to generate high-fidelity depth maps and a fused dense point cloud. A Neural method was selected since faces have a lot of textureless areas that classical methods cannot deal with.
 
 ### Stage 4: Surface Meshing
 
 Implements **Poisson Surface** Reconstruction via Open3D to generate a mesh. The final model includes vertex coloring (texture) derived from the source frames.
 
-**Note on Texture Quality**: While the pipeline produces textured meshes, color consistency on the skin may vary due to shading gradients and illumination changes during recording. This is a known challenge in MVS where non-Lambertian surfaces (like human skin) reflect light differently from various angles.
+**Note on Texture Quality**: While the pipeline produces textured meshes, color consistency on the skin may vary due to shading gradients and illumination changes during recording. 
 
 ---
 
 ## 🛠 Prerequisites
 
 * **OS:** Ubuntu 20.04 / 22.04 (Recommended)
-* **Hardware:** NVIDIA GPU with at least 8GB VRAM (required for PatchMatchNet). Tested on RTX3060
+* **Hardware:** NVIDIA GPU with at least 8GB VRAM (required for PatchmatchNet). Tested on RTX3060
 * **Conda:** Anaconda or Miniconda installed
 
 ---
@@ -77,28 +77,36 @@ pip install -r requirements.txt
 ## 🎥 Dataset recording Recommendations
 For optimal results, follow these guidelines when recording your video:
 
-* Steady Subject: Keep the head completely still. Even a small blink or smile can ruin the dense reconstruction.
+* **Steady Subject**: Keep the head completely still. Even a small blink or smile can ruin the dense reconstruction.
 
-* Constant Lighting: Use diffuse, ambient light. Avoid moving shadows or direct flashes (specular reflections).
+* **Constant Lighting**: Use diffuse, ambient light. Avoid moving shadows or direct flashes (specular reflections).
 
-* Slow Motion: Move the camera slowly and smoothly around the subject to avoid motion blur.
+* **Slow Motion**: Move the camera slowly and smoothly around the subject to avoid motion blur.
 
 ---
 
 ## 🖥 Usage
 
-The pipeline is fully automated via `run.py`. It automatically detects if the input is a single video file or a folder of images.
+The entire reconstruction pipeline is fully automated via the `run.py` script. The system is designed to be "plug-and-play," requiring minimal user intervention:
+
+* **Smart Input Detection**: The script automatically detects whether the provided `--input` is a single video file or a folder containing an image sequence.
+
+* **End-to-End Processing**: It handles everything from pre-processing (frame extraction and background removal) to SfM, MVS (PatchmatchNet), and the final Poisson Surface Reconstruction.
+
+Upon completion, all generated data is stored in the output directory (default: `data/results/`). The most important file is the final 3D reconstruction:
+
+* `final_model.ply`: This is the core output of the pipeline. It contains the final 3D mesh. This file includes baked-in texture data (vertex colors) captured during the reconstruction process, allowing for a realistic representation of the subject. For the best visualization of the geometry and vertex colors, we recommend using professional tools such as MeshLab or CloudCompare.
 
 ### Basic Execution
 
 ```bash
-python run.py --input path/to/your/video.mp4 --output path/to/output_folder
+python run.py --input path/to/your/video.mp4 [--output path/to/output_folder]
 ```
 
 ### Image Folder Execution
 
 ```bash
-python run.py --input path/to/images_folder/ --output path/to/output_folder
+python run.py --input path/to/images_folder/ [--output path/to/output_folder]
 ```
 
 ---
@@ -107,8 +115,7 @@ python run.py --input path/to/images_folder/ --output path/to/output_folder
 
 * **Keyframes:** `data/frames/`
 * **Reconstruction Workspace:** `data/workspace/`
-* **Final Mesh:** `data/workspace/dense/final_model.ply`
-  *(Can be opened with MeshLab or Blender)*
+* **Final Mesh:** `[output_folder]/final_model.ply` (default: `data/results/`)
 
 ---
 
@@ -129,7 +136,7 @@ The pipeline was benchmarked on an **RTX 3060 (12GB VRAM)** using a **8-second 1
 | Extraction & Filtering  | 18.94s |
 | Sparse SfM (pycolmap) | 3.89s |
 | MVS format conversion | 1.16s|
-| Neural Dense Reconstruction (PatchMatchNet)  | 68.51s |
+| Neural Dense Reconstruction (PatchmatchNet)  | 68.51s |
 | Meshing & Cleaning  | 21.01s |
 | **Total** | **113.51s** |
 
@@ -158,21 +165,21 @@ While the current pipeline provides a robust baseline for 3D reconstruction, sev
 ### 1. Metric Scale Recovery (Biometric Scaling)
 Currently, the model is generated in an arbitrary coordinate system. To achieve real-world millimeter precision, we plan to:
 
-IPD Normalization: Use the average human Interpupillary Distance (63mm) as a reference to rescale the point cloud.
+* IPD Normalization: Use the average human Interpupillary Distance (63mm) as a reference to rescale the point cloud.
 
-Iris Estimation: Integrate MediaPipe Iris to calculate absolute distance to the camera, leveraging the near-constant human iris diameter (11.7mm).
+* Iris Estimation: Integrate MediaPipe Iris to calculate absolute distance to the camera, leveraging the near-constant human iris diameter (11.7mm).
 
 ### 2. Hybrid SfM with Semantic Landmarks
 To improve the robustness of the sparse reconstruction (Stage 1), we propose:
 
-Landmark-Guided SfM: Injecting 3D facial landmarks from MediaPipe Face Mesh into the COLMAP process. This would provide strong geometric priors, especially in videos with fast movement or challenging angles where traditional feature matching might fail.
+* Landmark-Guided SfM: Injecting 3D facial landmarks from MediaPipe Face Mesh into the COLMAP process. This would provide strong geometric priors, especially in videos with fast movement or challenging angles where traditional feature matching might fail.
 
 ### 3. Advanced Texture De-lighting & Blending
 The current texturing suffers from lighting inconsistencies. Future iterations will include:
 
-Seamless Blending: Implementing a multi-band blending algorithm to smooth out transitions between frames.
+* Seamless Blending: Implementing a multi-band blending algorithm to smooth out transitions between frames.
 
-Inverse Rendering: Using a neural "de-lighting" stage to remove shadows and specular highlights, recovering the true albedo of the skin for more realistic assets.
+* Inverse Rendering: Using a neural "de-lighting" stage to remove shadows and specular highlights, recovering the true albedo of the skin for more realistic assets.
 
 ### 4. Parametric Model Fitting (FLAME)
 For applications requiring animation or rigging, the pipeline could evolve to fit a FLAME parametric model to the dense point cloud. This would transform the raw mesh into a clean, animatable topology with separated shape and expression parameters.

@@ -13,7 +13,7 @@ from src.mesh_utils import generate_final_mesh
 def main():
     parser = argparse.ArgumentParser(description="End-to-End 3D Reconstruction Pipeline")
     parser.add_argument("--input", type=str, required=True, help="Path to input video or image folder")
-    parser.add_argument("--output", type=str, required=False, default= "data/results", help="Path to folder to save the results")
+    parser.add_argument("--output", type=str, required=False, default= "data/results", help="Path to output folder (default: data/results/)")
     args = parser.parse_args()
 
     # --- Configuration ---
@@ -41,6 +41,8 @@ def main():
     if os.path.exists(workspace_dir):
         shutil.rmtree(workspace_dir)
     os.makedirs(workspace_dir, exist_ok=True)
+    if not os.path.exists(output_path):
+       os.makedirs(output_path, exist_ok=True)
 
     #Extract keyframes
     extractor = FrameExtractor(max_frames=100, motion_threshold=50.0)
@@ -74,8 +76,8 @@ def main():
         return
     
     # Export original sparse cloud for reference
-    pcd = engine.export_to_open3d()   
-    o3d.io.write_point_cloud(os.path.join(output_path, "sparse_reference.ply"), pcd) 
+    #pcd = engine.export_to_open3d()   
+    #o3d.io.write_point_cloud(os.path.join(output_path, "sparse_reference.ply"), pcd) 
     
     timings['SfM Sparse'] = time.perf_counter() - sfm_start
 

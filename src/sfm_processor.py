@@ -17,11 +17,7 @@ class ColmapEngine:
         self.database_path = self.output_dir / "database.db"
         self.dense_dir = self.output_dir / "dense"
         self.reconstruction = None
-        
-        # Ensure output directory exists
-        if not self.output_dir.exists():
-            self.output_dir.mkdir(parents=True)
-
+   
     def run_sfm(self):
         """
         Executes the Sparse reconstruction (SfM): Feature Extraction, Matching, and Mapping.
