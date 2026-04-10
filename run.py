@@ -23,8 +23,14 @@ def main():
     workspace_dir = "data/workspace"    
     checkpoint_path = "checkpoints/params_000007.ckpt"
     
-    if not os.path.exists(output_path):
-        os.makedirs(output_path, exist_ok=True)
+    os.makedirs("data", exist_ok=True)
+    os.makedirs(output_path, exist_ok=True)
+
+    # 2. Reseteo de carpetas de trabajo (Borrar si existen y recrear)
+    for folder in [frames_dir, workspace_dir]:
+        if os.path.exists(folder):
+            shutil.rmtree(folder)
+        os.makedirs(folder, exist_ok=True)
 
     timings = {}
     total_start = time.perf_counter()
@@ -35,14 +41,6 @@ def main():
     print(f"\n[STAGE 0] Extracting & filtering keyframes from: {input_source.name}")
     extract_start = time.perf_counter()
     
-    if os.path.exists(frames_dir):
-        shutil.rmtree(frames_dir)
-    os.makedirs(frames_dir, exist_ok=True)
-    if os.path.exists(workspace_dir):
-        shutil.rmtree(workspace_dir)
-    os.makedirs(workspace_dir, exist_ok=True)
-    if not os.path.exists(output_path):
-       os.makedirs(output_path, exist_ok=True)
 
     #Extract keyframes
     extractor = FrameExtractor(max_frames=100, motion_threshold=50.0)
