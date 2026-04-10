@@ -4,10 +4,8 @@ __pycache__/
 
 
 
-data/workspace/
-data/frames/
-data/input_video
-data/results
+data/*
+!data/.gitkeep
 *.ply
 *.pfm
 
